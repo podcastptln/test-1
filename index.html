@@ -9,18 +9,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Corporate Calm -->
-    <!-- Application Structure Plan: Aplikasi ini dirancang sebagai SPA (Single-Page Application) dengan struktur berbasis peran yang dapat diganti (Pengusul vs. Peninjau) untuk mensimulasikan alur kerja 3-tier. Strukturnya adalah dasbor utama yang menampilkan daftar memo, dan tampilan formulir/detail. Untuk Pengusul, formulir pembuatan nota dibagi menjadi 9 tab yang sesuai dengan aspek kajian untuk memudahkan pengisian dan mencegah pengguna kewalahan. Untuk Peninjau, tampilan bersifat hanya-baca dengan area khusus untuk komentar dan keputusan. Alur kerja otomatis (peringatan 3 hari & umpan balik 5 hari) disimulasikan dengan JavaScript. Struktur ini dipilih karena secara langsung memetakan alur kerja kompleks yang dijelaskan ke dalam antarmuka interaktif tunggal yang mudah digunakan dan dipahami oleh setiap peran. -->
+    <!-- Application Structure Plan: This application is designed as a SPA (Single-Page Application) with a role-swappable (Proposer vs. Reviewer) structure to simulate a 3-tier workflow. The structure is a main dashboard showing a list of memos, and a form/detail view. For Proposers, the memo creation form is broken into 9 tabs corresponding to the study aspects to ease data entry and prevent user overwhelm. For Reviewers, the view is read-only with a dedicated section for comments and decisions. Automated workflows (3-day alerts & 5-day feedback) are simulated with JavaScript. This structure was chosen as it directly maps the complex workflow described into a single interactive interface that is easy for each role to use and understand. -->
     <!-- Visualization & Content Choices: 
-        - Laporan: Kriteria Nota Analisa Investasi & Alur Kerja 3-Tier.
-        - Tujuan: Memfasilitasi pembuatan, peninjauan, dan persetujuan nota investasi secara efisien.
-        - Metode Presentasi:
-            - Dasbor: Tabel HTML/Tailwind untuk menampilkan daftar nota dengan status (ikon Unicode) untuk memberikan gambaran umum.
-            - Formulir Nota: Antarmuka bertab HTML/Tailwind untuk mengorganisir 9 aspek kajian.
-            - Data Finansial: Input file CSV diproses dengan PapaParse.js dan ditampilkan dalam tabel. Sebuah chart bar (Chart.js) ditambahkan untuk visualisasi ringkasan metrik kunci (misal: ROE, IRR vs WACC) agar lebih mudah dicerna.
-            - Alur Kerja: Diagram alur sederhana dibuat dengan HTML/Tailwind untuk konteks visual.
-        - Interaksi: Pengguna dapat mengganti peran, membuat nota baru, mengisi formulir per tab, mengunggah CSV, mengajukan, meninjau (hanya-baca), dan memberikan komentar/keputusan. Tombol "Ajukan" dinonaktifkan hingga semua data terisi.
-        - Justifikasi: Pendekatan ini memecah proses yang kompleks menjadi langkah-langkah yang dapat dikelola, memvalidasi input, dan menyediakan visualisasi data untuk membantu pengambilan keputusan, semuanya dalam satu halaman sesuai permintaan.
-        - Library/Metode: Vanilla JS, Tailwind CSS, Chart.js, PapaParse.js.
+         - Report: Investment Analysis Memo Criteria & 3-Tier Workflow.
+         - Goal: To facilitate the efficient creation, review, and approval of investment memos.
+         - Presentation Methods:
+           - Dashboard: An HTML/Tailwind table displays the memo list with status (Unicode icons) for an at-a-glance overview.
+           - Memo Form: An HTML/Tailwind tabbed interface organizes the 9 study aspects.
+           - Financial Data: CSV file input is processed with PapaParse.js and displayed in a table. A bar chart (Chart.js) is added to visualize a summary of key metrics (e.g., ROE, IRR vs WACC) for easier digestion.
+           - Workflow: A simple workflow diagram is created with HTML/Tailwind for visual context.
+         - Interaction: Users can switch roles, create new memos, fill out the form per tab, upload a CSV, submit, review (read-only), and provide comments/decisions. The "Submit" button is disabled until all data is filled.
+         - Justification: This approach breaks down a complex process into manageable steps, validates input, and provides data visualization to aid decision-making, all within the requested single page.
+         - Libraries/Methods: Vanilla JS, Tailwind CSS, Chart.js, PapaParse.js.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -35,25 +35,15 @@
 
     <div id="app" class="container mx-auto p-4 sm:p-6 lg:p-8">
         
-        <header class="mb-8">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                <div>
-                    <h1 class="text-3xl font-bold text-cyan-800">Nota Analisa Investasi</h1>
-                    <p class="text-slate-500 mt-1">Platform terpusat untuk pengajuan dan persetujuan investasi.</p>
-                </div>
-                <div class="flex items-center gap-4 mt-4 sm:mt-0">
-                    <span class="text-sm font-medium text-slate-600">Peran Pengguna:</span>
-                    <select id="role-switcher" class="bg-white border border-slate-300 rounded-md shadow-sm py-2 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500">
-                        <option value="proposer">Pengusul (Anak Perusahaan)</option>
-                        <option value="reviewer">Peninjau (Perusahaan Induk)</option>
-                    </select>
-                </div>
-            </div>
+        <header id="app-header" class="mb-8">
+             <!-- Header content is rendered by JavaScript -->
         </header>
 
         <main id="main-content">
+            <!-- Content is rendered here by JavaScript -->
         </main>
 
+        <!-- Modal for notifications -->
         <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
             <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
                 <h3 id="modal-title" class="text-lg font-bold">Pemberitahuan</h3>
@@ -68,17 +58,32 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Application state management
             const appState = {
-                currentUserRole: 'proposer',
+                isAuthenticated: false,
+                currentUserRole: null, // 'proposer' or 'reviewer'
                 memos: [
                     {
                         id: 1,
                         title: 'Proyek Ekspansi Pabrik Cikarang',
                         proposer: 'PT Manufaktur Jaya',
-                        status: 'Dalam Tinjauan',
+                        status: 'Dalam Tinjauan', // Draf, Dalam Tinjauan, Disetujui, Ditolak
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 4)).toISOString(),
-                        reviewers: [{ name: 'Budi Santoso', reviewed: true, decision: 'Setuju', comment: 'Analisa finansial sudah baik, mohon perjelas mitigasi risiko operasional.' }, { name: 'Citra Lestari', reviewed: false, decision: null, comment: null }],
-                        data: { 1: { 'EBITDA Margin': '15%', 'Net Profit Margin': '8%', 'ROE': '12%', 'Current Ratio': '1.8', 'DSCR': '2.1' }, 2: { 'content': 'Meningkatkan kapasitas produksi sebesar 30% untuk memenuhi permintaan pasar ekspor yang meningkat.' }, 3: { 'content': 'Menyerap 200 tenaga kerja baru dan berkontribusi pada PDB daerah sebesar 0.5%.' }, 4: { 'content': 'Kontribusi pajak diproyeksikan meningkat sebesar Rp 5 Miliar per tahun.' }, 5: { 'content': 'Target downtime operasi turun menjadi < 2% dan menjaga skor CSI > 4.5.' }, 6: { 'content': 'Analisa hukum menunjukkan kepatuhan penuh terhadap UU PT dan peraturan internal. Risiko hukum utama adalah sengketa kontrak dengan pemasok baru, mitigasi dilakukan dengan klausul arbitrase yang kuat.' }, 7: { 'content': 'Nilai Eksposur Risiko: Rp 10 Miliar. Biaya Mitigasi: Rp 1.5 Miliar.' }, 8: { 'content': 'Tingkat kepatuhan terhadap kelengkapan dokumen 100%. Kepatuhan internal dinilai tinggi.' }, 9: { 'content': 'Proyek ini juga bertujuan untuk meningkatkan sentimen positif pemberitaan pasca isu lingkungan tahun lalu.' } }
+                        reviewers: [
+                            { name: 'Budi Santoso', reviewed: true, decision: 'Setuju', comment: 'Analisa finansial sudah baik, mohon perjelas mitigasi risiko operasional.' }, 
+                            { name: 'Citra Lestari', reviewed: false, decision: null, comment: null }
+                        ],
+                        data: { 
+                            1: { 'EBITDA Margin': '15%', 'Net Profit Margin': '8%', 'ROE': '12', 'IRR': '14', 'WACC': '11', 'Current Ratio': '1.8', 'DSCR': '2.1' }, 
+                            2: { 'content': 'Meningkatkan kapasitas produksi sebesar 30% untuk memenuhi permintaan pasar ekspor yang meningkat.' }, 
+                            3: { 'content': 'Menyerap 200 tenaga kerja baru dan berkontribusi pada PDB daerah sebesar 0.5%.' }, 
+                            4: { 'content': 'Kontribusi pajak diproyeksikan meningkat sebesar Rp 5 Miliar per tahun.' }, 
+                            5: { 'content': 'Target downtime operasi turun menjadi < 2% dan menjaga skor CSI > 4.5.' }, 
+                            6: { 'content': 'Analisa hukum menunjukkan kepatuhan penuh terhadap UU PT dan peraturan internal. Risiko hukum utama adalah sengketa kontrak dengan pemasok baru, mitigasi dilakukan dengan klausul arbitrase yang kuat.' }, 
+                            7: { 'content': 'Nilai Eksposur Risiko: Rp 10 Miliar. Biaya Mitigasi: Rp 1.5 Miliar.' }, 
+                            8: { 'content': 'Tingkat kepatuhan terhadap kelengkapan dokumen 100%. Kepatuhan internal dinilai tinggi.' }, 
+                            9: { 'content': 'Proyek ini juga bertujuan untuk meningkatkan sentimen positif pemberitaan pasca isu lingkungan tahun lalu.' } 
+                        }
                     },
                     {
                         id: 2,
@@ -86,8 +91,21 @@
                         proposer: 'PT Logistik Prima',
                         status: 'Disetujui',
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
-                        reviewers: [{ name: 'Budi Santoso', reviewed: true, decision: 'Setuju', comment: 'Proposal yang sangat baik dan dibutuhkan.' }, { name: 'Citra Lestari', reviewed: true, decision: 'Setuju', comment: 'Setuju, ROI sangat menjanjikan.' }],
-                        data: { 1: { 'EBITDA Margin': 'N/A', 'Net Profit Margin': 'N/A', 'ROE': 'N/A', 'Current Ratio': 'N/A', 'DSCR': 'N/A' }, 2: { 'content': 'Mengganti sistem legacy untuk efisiensi dan integrasi data antar departemen.' }, 3: { 'content': 'Dampak lingkungan rendah. Dampak sosial berupa peningkatan skill karyawan.' }, 4: { 'content': 'Tidak ada dampak fiskal langsung, namun efisiensi jangka panjang akan meningkatkan profitabilitas dan pajak.' }, 5: { 'content': 'Pemenuhan SLA untuk IT Maturity menjadi 99.9%.' }, 6: { 'content': 'Kewenangan Direksi sesuai. Hubungan hukum dengan vendor SAP telah dianalisa.' }, 7: { 'content': 'Risiko implementasi gagal. Mitigasi dengan menunjuk konsultan berpengalaman.' }, 8: { 'content': 'Sesuai dengan GCG perusahaan.' }, 9: { 'content': 'Peningkatan kapabilitas SDM dalam teknologi.' } }
+                        reviewers: [
+                            { name: 'Budi Santoso', reviewed: true, decision: 'Setuju', comment: 'Proposal yang sangat baik dan dibutuhkan.' }, 
+                            { name: 'Citra Lestari', reviewed: true, decision: 'Setuju', comment: 'Setuju, ROI sangat menjanjikan.' }
+                        ],
+                        data: { 
+                            1: { 'ROE': '25', 'IRR': '20', 'WACC': '12', 'DSCR': 'N/A' }, 
+                            2: { 'content': 'Mengganti sistem legacy untuk efisiensi dan integrasi data antar departemen.' }, 
+                            3: { 'content': 'Dampak lingkungan rendah. Dampak sosial berupa peningkatan skill karyawan.' }, 
+                            4: { 'content': 'Tidak ada dampak fiskal langsung, namun efisiensi jangka panjang akan meningkatkan profitabilitas dan pajak.' }, 
+                            5: { 'content': 'Pemenuhan SLA untuk IT Maturity menjadi 99.9%.' }, 
+                            6: { 'content': 'Kewenangan Direksi sesuai. Hubungan hukum dengan vendor SAP telah dianalisa.' }, 
+                            7: { 'content': 'Risiko implementasi gagal. Mitigasi dengan menunjuk konsultan berpengalaman.' }, 
+                            8: { 'content': 'Sesuai dengan GCG perusahaan.' }, 
+                            9: { 'content': 'Peningkatan kapabilitas SDM dalam teknologi.' } 
+                        }
                     },
                     {
                         id: 3,
@@ -104,24 +122,39 @@
                         proposer: 'PT Manufaktur Jaya',
                         status: 'Ditolak',
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 20)).toISOString(),
-                        reviewers: [{ name: 'Budi Santoso', reviewed: true, decision: 'Tolak', comment: 'Proyeksi NPV terlalu optimis dan tidak sejalan dengan WACC saat ini. Mohon kaji ulang asumsi.' }, { name: 'Citra Lestari', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan Pak Budi. Analisa risiko pasar kurang mendalam.' }],
-                        data: { 1: {}, 2: { 'content': 'Membangun hub distribusi baru di Indonesia Timur.' }, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}, 9: {} }
+                        reviewers: [
+                            { name: 'Budi Santoso', reviewed: true, decision: 'Tolak', comment: 'Proyeksi NPV terlalu optimis dan tidak sejalan dengan WACC saat ini. Mohon kaji ulang asumsi.' }, 
+                            { name: 'Citra Lestari', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan Pak Budi. Analisa risiko pasar kurang mendalam.' }
+                        ],
+                        data: { 
+                            1: { 'ROE': '8', 'IRR': '9', 'WACC': '10', 'DSCR': '1.1' }, 
+                            2: { 'content': 'Membangun hub distribusi baru di Indonesia Timur.' }, 
+                            3: { 'content': 'Analisa dampak lingkungan belum lengkap.'}, 
+                            4: { 'content': 'Perizinan daerah belum final.'}, 
+                            5: { 'content': 'Ketersediaan infrastruktur pendukung dipertanyakan.'}, 
+                            6: { 'content': 'Risiko sengketa lahan belum dimitigasi.'}, 
+                            7: { 'content': 'Risiko pasar kurang dianalisa.'}, 
+                            8: { 'content': 'Kepatuhan terhadap GCG perlu diperjelas.'}, 
+                            9: { 'content': 'Tidak ada aspek lain.'} 
+                        }
                     },
                 ],
-                activeView: 'dashboard',
+                activeView: 'login', // 'login', 'dashboard', 'form', 'review'
                 activeMemoId: null,
                 activeFormData: {},
                 activeTab: 1,
             };
 
+            // DOM element references
+            const appHeader = document.getElementById('app-header');
             const mainContent = document.getElementById('main-content');
-            const roleSwitcher = document.getElementById('role-switcher');
             const modalContainer = document.getElementById('modal-container');
             const modalTitle = document.getElementById('modal-title');
             const modalMessage = document.getElementById('modal-message');
             const modalCloseBtn = document.getElementById('modal-close-btn');
             let financialChart = null;
 
+            // Constants
             const aspectTitles = {
                 1: 'Finansial / Bisnis',
                 2: 'Kepentingan / Objektivitas / Tujuan',
@@ -134,6 +167,7 @@
                 9: 'Aspek Lainnya'
             };
 
+            // --- MODAL FUNCTIONS ---
             function showModal(title, message) {
                 modalTitle.textContent = title;
                 modalMessage.innerHTML = message;
@@ -147,6 +181,92 @@
             }
 
             modalCloseBtn.addEventListener('click', hideModal);
+            
+            // --- AUTHENTICATION FUNCTIONS ---
+            function handleLogin(event) {
+                event.preventDefault();
+                const usernameEl = document.getElementById('username');
+                const passwordEl = document.getElementById('password');
+                const errorEl = document.getElementById('login-error');
+                const username = usernameEl.value.trim();
+                const password = passwordEl.value.trim();
+
+                if (username === 'pengusul' && password === '1234') {
+                    appState.isAuthenticated = true;
+                    appState.currentUserRole = 'proposer';
+                    appState.activeView = 'dashboard';
+                    render();
+                } else if (username === 'peninjau' && password === '1234') {
+                    appState.isAuthenticated = true;
+                    appState.currentUserRole = 'reviewer';
+                    appState.activeView = 'dashboard';
+                    render();
+                } else {
+                    errorEl.textContent = 'ID Pengguna atau Kata Sandi salah.';
+                    errorEl.classList.remove('hidden');
+                }
+            }
+
+            function handleLogout() {
+                appState.isAuthenticated = false;
+                appState.currentUserRole = null;
+                appState.activeView = 'login';
+                render();
+            }
+
+
+            // --- UI RENDERING FUNCTIONS ---
+
+            function renderHeader() {
+                if (!appState.isAuthenticated) {
+                    appHeader.innerHTML = `
+                        <div class="text-center">
+                            <h1 class="text-3xl font-bold text-cyan-800">Nota Analisa Investasi</h1>
+                            <p class="text-slate-500 mt-1">Silakan masuk untuk melanjutkan.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const roleName = appState.currentUserRole === 'proposer' ? 'Pengusul' : 'Peninjau';
+                appHeader.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                        <div>
+                            <h1 class="text-3xl font-bold text-cyan-800">Nota Analisa Investasi</h1>
+                            <p class="text-slate-500 mt-1">Platform terpusat untuk pengajuan dan persetujuan investasi.</p>
+                        </div>
+                        <div class="flex items-center gap-4 mt-4 sm:mt-0">
+                            <div class="text-right">
+                                <span class="text-sm font-medium text-slate-600">Masuk sebagai: <b>${roleName}</b></span>
+                            </div>
+                            <button id="logout-btn" class="bg-red-500 text-white font-bold py-2 px-3 rounded-md hover:bg-red-600 text-sm">Logout</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderLogin() {
+                mainContent.innerHTML = `
+                    <div class="max-w-md mx-auto mt-10">
+                        <form id="login-form" class="bg-white shadow-md rounded-lg p-8">
+                            <div class="mb-4">
+                                <label for="username" class="block text-slate-700 text-sm font-bold mb-2">ID Pengguna</label>
+                                <input type="text" id="username" class="shadow appearance-none border rounded w-full py-2 px-3 text-slate-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="pengusul / peninjau">
+                            </div>
+                            <div class="mb-6">
+                                <label for="password" class="block text-slate-700 text-sm font-bold mb-2">Kata Sandi</label>
+                                <input type="password" id="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-slate-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" placeholder="1234">
+                            </div>
+                            <p id="login-error" class="text-red-500 text-xs italic mb-4 hidden"></p>
+                            <div class="flex items-center justify-between">
+                                <button type="submit" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full">
+                                    Masuk
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+            }
 
             function getStatusBadge(status) {
                 switch (status) {
@@ -167,9 +287,9 @@
 
                 let content = `
                     <div class="bg-white shadow-md rounded-lg p-6">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
                             <h2 class="text-xl font-semibold">${isReviewer ? 'Daftar Nota untuk Ditinjau' : 'Dasbor Nota Anda'}</h2>
-                            ${!isReviewer ? '<button id="create-new-memo-btn" class="bg-cyan-600 text-white font-bold py-2 px-4 rounded-md hover:bg-cyan-700">+ Buat Nota Baru</button>' : ''}
+                            ${!isReviewer ? '<button id="create-new-memo-btn" class="bg-cyan-600 text-white font-bold py-2 px-4 rounded-md hover:bg-cyan-700 mt-3 sm:mt-0">+ Buat Nota Baru</button>' : ''}
                         </div>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-slate-200">
@@ -209,7 +329,20 @@
                 appState.activeView = 'form';
                 appState.activeMemoId = memoId;
                 const isNew = memoId === null;
-                const memo = isNew ? { title: '', proposer: '', data: {} } : appState.memos.find(m => m.id === memoId);
+                let memo;
+
+                if (isNew) {
+                    const title = prompt("Masukkan Judul Proyek:", "Proyek Baru " + new Date().toLocaleTimeString());
+                     if (!title) {
+                        renderDashboard(); // Cancelled
+                        return;
+                    }
+                    memo = { id: Date.now(), title: title, proposer: 'PT Manufaktur Jaya', status: 'Draf', reviewers: [], data: {} };
+                    appState.activeMemoId = memo.id;
+                } else {
+                    memo = appState.memos.find(m => m.id === memoId);
+                }
+                
                 appState.activeFormData = JSON.parse(JSON.stringify(memo.data));
                 appState.activeTab = 1;
 
@@ -256,7 +389,7 @@
                 if (appState.activeTab === 1) {
                     contentHtml = `
                         <h3 class="text-lg font-semibold mb-2 required-dot">${aspectTitles[1]}</h3>
-                        <p class="text-sm text-slate-500 mb-4">Unggah file CSV dari Aset Operasi yang berisi data finansial. Pastikan format sesuai dengan templat.</p>
+                        <p class="text-sm text-slate-500 mb-4">Unggah file CSV dari Aset Operasi yang berisi data finansial. Pastikan format sesuai dengan templat (kolom "Metrik" dan "Nilai").</p>
                         <input type="file" id="csv-upload" accept=".csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
                         <div id="financial-data-preview" class="mt-4 p-4 border rounded-md bg-slate-50 ${Object.keys(data).length > 0 ? '' : 'hidden'}">
                             <h4 class="font-semibold mb-2">Pratinjau Data Finansial</h4>
@@ -278,19 +411,6 @@
                     `;
                 }
                 contentContainer.innerHTML = contentHtml;
-                
-                const textarea = document.getElementById('aspect-content');
-                if (textarea) {
-                    textarea.addEventListener('input', (e) => {
-                        appState.activeFormData[appState.activeTab] = { content: e.target.value };
-                        checkFormCompleteness();
-                    });
-                }
-                
-                const csvUpload = document.getElementById('csv-upload');
-                if(csvUpload){
-                    csvUpload.addEventListener('change', handleCsvUpload);
-                }
             }
             
             function handleCsvUpload(event) {
@@ -299,8 +419,9 @@
 
                 Papa.parse(file, {
                     header: true,
+                    skipEmptyLines: true,
                     complete: function(results) {
-                        if (results.data.length > 0 && results.data[0]['Metrik'] && results.data[0]['Nilai']) {
+                        if (results.data.length > 0 && results.meta.fields.includes('Metrik') && results.meta.fields.includes('Nilai')) {
                             const financialData = results.data.reduce((acc, row) => {
                                 if(row['Metrik'] && row['Nilai']) {
                                     acc[row['Metrik']] = row['Nilai'];
@@ -344,7 +465,6 @@
                 appState.activeView = 'review';
                 appState.activeMemoId = memoId;
                 const memo = appState.memos.find(m => m.id === memoId);
-                const isReviewer = appState.currentUserRole === 'reviewer';
 
                 let content = `
                     <div class="bg-white shadow-md rounded-lg p-6">
@@ -434,7 +554,10 @@
                         </div>
                     `;
                 } else {
-                    return `<p>${data.content.replace(/\n/g, '<br>')}</p>`;
+                    // Sanitize content to prevent HTML injection
+                    const p = document.createElement('p');
+                    p.textContent = data.content;
+                    return p.outerHTML.replace(/\n/g, '<br>');
                 }
             }
             
@@ -460,10 +583,10 @@
                             label: 'Nilai Metrik',
                             data: [roe, irr, wacc, dscr],
                             backgroundColor: [
-                                'rgba(56, 189, 248, 0.6)',
-                                'rgba(34, 211, 238, 0.6)',
-                                'rgba(249, 115, 22, 0.6)',
-                                'rgba(16, 185, 129, 0.6)'
+                                'rgba(56, 189, 248, 0.6)', // sky-400
+                                'rgba(34, 211, 238, 0.6)', // cyan-400
+                                'rgba(249, 115, 22, 0.6)',  // orange-500
+                                'rgba(16, 185, 129, 0.6)'  // emerald-500
                             ],
                             borderColor: [
                                 'rgba(56, 189, 248, 1)',
@@ -490,138 +613,165 @@
 
             function renderReviewerSection(memo) {
                 const isReviewer = appState.currentUserRole === 'reviewer';
+                // For this simulation, we assume the logged-in reviewer is 'Citra Lestari'
                 const currentUserReview = memo.reviewers.find(r => r.name === 'Citra Lestari');
                 
                 let html = '<div class="space-y-4">';
                 memo.reviewers.forEach(reviewer => {
                     html += `
                         <div class="bg-slate-50 p-4 rounded-lg">
-                            <p class="font-semibold">${reviewer.name}</p>
+                            <p class="font-bold text-slate-800">${reviewer.name}</p>
                             ${reviewer.reviewed 
-                                ? `<p class="text-sm mt-1">Keputusan: <span class="font-bold ${reviewer.decision === 'Setuju' ? 'text-emerald-600' : 'text-red-600'}">${reviewer.decision}</span></p>
-                                   <p class="text-sm mt-1 text-slate-600 italic">"${reviewer.comment || 'Tidak ada komentar.'}"</p>`
+                                ? `<p class="text-sm mt-1">Keputusan: <span class="font-semibold ${reviewer.decision === 'Setuju' ? 'text-emerald-600' : 'text-red-600'}">${reviewer.decision}</span></p>
+                                   <p class="text-sm mt-1 text-slate-600 italic">"${reviewer.comment}"</p>`
                                 : `<p class="text-sm mt-1 text-slate-500 italic">Menunggu tinjauan...</p>`
                             }
                         </div>
                     `;
                 });
-                html += '</div>';
 
-                if (isReviewer && memo.status === 'Dalam Tinjauan' && currentUserReview && !currentUserReview.reviewed) {
+                if (isReviewer && currentUserReview && !currentUserReview.reviewed && memo.status === 'Dalam Tinjauan') {
                     html += `
-                        <div class="mt-6 pt-6 border-t border-slate-200">
-                            <h4 class="font-semibold mb-3">Formulir Tinjauan Anda (Citra Lestari)</h4>
-                            <div class="space-y-4">
-                                <div>
-                                    <label for="reviewer-comment" class="block text-sm font-medium text-slate-700">Komentar Anda</label>
-                                    <textarea id="reviewer-comment" rows="3" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm" placeholder="Berikan komentar atau pertanyaan Anda..."></textarea>
-                                </div>
-                                <div class="flex items-center justify-end gap-4">
-                                    <button id="reject-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700">Tolak</button>
-                                    <button id="approve-btn" class="bg-emerald-600 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-700">Setujui</button>
-                                </div>
+                        <div id="review-form-container" class="mt-6 pt-4 border-t">
+                            <h4 class="font-semibold mb-2">Berikan Tinjauan Anda (sebagai Citra Lestari)</h4>
+                            <div class="mb-3">
+                                <label for="review-comment" class="block text-sm font-medium text-slate-700 mb-1">Komentar</label>
+                                <textarea id="review-comment" rows="3" class="w-full p-2 border border-slate-300 rounded-md focus:ring-cyan-500 focus:border-cyan-500" placeholder="Berikan masukan Anda..."></textarea>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <label class="block text-sm font-medium text-slate-700">Keputusan:</label>
+                                <button id="approve-btn" class="bg-emerald-500 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-600">Setuju</button>
+                                <button id="reject-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-md hover:bg-red-600">Tolak</button>
                             </div>
                         </div>
                     `;
                 }
 
+                html += '</div>';
                 return html;
             }
 
-            function handleRoleChange(event) {
-                appState.currentUserRole = event.target.value;
-                renderDashboard();
-            }
-
-            function handleCreateNewMemo() {
-                const newMemo = {
-                    id: Math.max(...appState.memos.map(m => m.id)) + 1,
-                    title: `Nota Baru #${Math.max(...appState.memos.map(m => m.id)) + 1}`,
-                    proposer: 'Anak Perusahaan Anda',
-                    status: 'Draf',
-                    submissionDate: null,
-                    reviewers: [],
-                    data: {}
-                };
-                appState.memos.push(newMemo);
-                renderForm(newMemo.id);
-            }
-
-            function handleSaveDraft() {
-                const memo = appState.memos.find(m => m.id === appState.activeMemoId);
-                memo.data = appState.activeFormData;
-                showModal('Draf Disimpan', 'Nota Anda telah berhasil disimpan sebagai draf.');
-                renderDashboard();
-            }
-
-            function handleSubmitMemo() {
-                const memo = appState.memos.find(m => m.id === appState.activeMemoId);
-                memo.data = appState.activeFormData;
-                memo.status = 'Dalam Tinjauan';
-                memo.submissionDate = new Date().toISOString();
-                memo.reviewers = [{ name: 'Budi Santoso', reviewed: false, decision: null, comment: null }, { name: 'Citra Lestari', reviewed: false, decision: null, comment: null }];
-                showModal('Nota Diajukan', 'Nota Anda telah berhasil diajukan untuk ditinjau.');
-                renderDashboard();
-            }
+            // --- EVENT LISTENERS & MAIN RENDER ---
             
-            function handleReviewDecision(decision) {
-                const memo = appState.memos.find(m => m.id === appState.activeMemoId);
-                const reviewer = memo.reviewers.find(r => r.name === 'Citra Lestari');
-                const comment = document.getElementById('reviewer-comment').value;
+            function addEventListeners() {
+                // Use event delegation on a parent element
+                document.body.addEventListener('click', (e) => {
+                    // Logout
+                    if (e.target && e.target.id === 'logout-btn') {
+                        handleLogout();
+                    }
+                    // Dashboard buttons
+                    if (e.target && e.target.id === 'create-new-memo-btn') {
+                        renderForm(null);
+                    }
+                    if (e.target && e.target.classList.contains('view-memo-btn')) {
+                        const memoId = parseInt(e.target.dataset.id);
+                        const memo = appState.memos.find(m => m.id === memoId);
+                        if (appState.currentUserRole === 'proposer' && memo.status === 'Draf') {
+                            renderForm(memoId);
+                        } else {
+                            renderReviewView(memoId);
+                        }
+                    }
+                    // Form buttons
+                    if (e.target && e.target.id === 'back-to-dashboard-btn') {
+                        renderDashboard();
+                    }
+                    if (e.target && e.target.classList.contains('tab-btn')) {
+                        appState.activeTab = parseInt(e.target.dataset.tab);
+                        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        renderFormTabContent();
+                    }
+                    if (e.target && (e.target.id === 'save-draft-btn' || e.target.id === 'submit-memo-btn')) {
+                        const isSubmit = e.target.id === 'submit-memo-btn';
+                        const memoIndex = appState.memos.findIndex(m => m.id === appState.activeMemoId);
+                        const newMemoData = {
+                            id: appState.activeMemoId,
+                            title: document.querySelector('h2.font-semibold').textContent.replace('Edit: ', ''),
+                            proposer: 'PT Manufaktur Jaya', // Assuming a fixed proposer for simplicity
+                            status: isSubmit ? 'Dalam Tinjauan' : 'Draf',
+                            submissionDate: isSubmit ? new Date().toISOString() : null,
+                            reviewers: isSubmit ? [{ name: 'Budi Santoso', reviewed: false, decision: null, comment: null }, { name: 'Citra Lestari', reviewed: false, decision: null, comment: null }] : [],
+                            data: appState.activeFormData
+                        };
 
-                reviewer.reviewed = true;
-                reviewer.decision = decision;
-                reviewer.comment = comment;
+                        if (memoIndex > -1) {
+                            appState.memos[memoIndex] = newMemoData;
+                        } else {
+                            appState.memos.push(newMemoData);
+                        }
+                        showModal('Sukses', `Nota telah berhasil ${isSubmit ? 'diajukan' : 'disimpan sebagai draf'}.`);
+                        renderDashboard();
+                    }
+                    // Review buttons
+                    if (e.target && (e.target.id === 'approve-btn' || e.target.id === 'reject-btn')) {
+                        const decision = e.target.id === 'approve-btn' ? 'Setuju' : 'Tolak';
+                        const comment = document.getElementById('review-comment').value;
+                        if (!comment) {
+                            showModal('Validasi Gagal', 'Mohon isi kolom komentar sebelum memberikan keputusan.');
+                            return;
+                        }
 
-                const allReviewed = memo.reviewers.every(r => r.reviewed);
-                if (allReviewed) {
-                    const rejected = memo.reviewers.some(r => r.decision === 'Tolak');
-                    memo.status = rejected ? 'Ditolak' : 'Disetujui';
-                }
-                
-                showModal('Tinjauan Terkirim', `Anda telah ${decision === 'Setuju' ? 'menyetujui' : 'menolak'} nota ini.`);
-                renderDashboard();
+                        const memo = appState.memos.find(m => m.id === appState.activeMemoId);
+                        const reviewer = memo.reviewers.find(r => r.name === 'Citra Lestari');
+                        reviewer.reviewed = true;
+                        reviewer.decision = decision;
+                        reviewer.comment = comment;
+
+                        // Check if all reviewers have made a decision
+                        const allReviewed = memo.reviewers.every(r => r.reviewed);
+                        if (allReviewed) {
+                            const allApproved = memo.reviewers.every(r => r.decision === 'Setuju');
+                            memo.status = allApproved ? 'Disetujui' : 'Ditolak';
+                        }
+                        
+                        showModal('Sukses', 'Tinjauan Anda telah berhasil dikirim.');
+                        renderReviewView(appState.activeMemoId);
+                    }
+                });
+
+                document.body.addEventListener('change', (e) => {
+                    if (e.target && e.target.id === 'csv-upload') {
+                        handleCsvUpload(e);
+                    }
+                });
+
+                 document.body.addEventListener('input', (e) => {
+                    if (e.target && e.target.id === 'aspect-content') {
+                        appState.activeFormData[appState.activeTab] = { content: e.target.value };
+                        checkFormCompleteness();
+                    }
+                });
+
+                document.body.addEventListener('submit', (e) => {
+                    if (e.target && e.target.id === 'login-form') {
+                        handleLogin(e);
+                    }
+                });
             }
 
-            mainContent.addEventListener('click', (e) => {
-                if (e.target.id === 'create-new-memo-btn') {
-                    handleCreateNewMemo();
+            function render() {
+                renderHeader();
+                switch(appState.activeView) {
+                    case 'login':
+                        renderLogin();
+                        break;
+                    case 'dashboard':
+                        renderDashboard();
+                        break;
+                    case 'form':
+                        renderForm(appState.activeMemoId);
+                        break;
+                    case 'review':
+                        renderReviewView(appState.activeMemoId);
+                        break;
                 }
-                if (e.target.id === 'back-to-dashboard-btn') {
-                    renderDashboard();
-                }
-                if (e.target.classList.contains('view-memo-btn')) {
-                    const memoId = parseInt(e.target.dataset.id);
-                    const memo = appState.memos.find(m => m.id === memoId);
-                    if (appState.currentUserRole === 'proposer' && memo.status === 'Draf') {
-                        renderForm(memoId);
-                    } else {
-                        renderReviewView(memoId);
-                    }
-                }
-                if (e.target.classList.contains('tab-btn')) {
-                    appState.activeTab = parseInt(e.target.dataset.tab);
-                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                    e.target.classList.add('active');
-                    renderFormTabContent();
-                }
-                if (e.target.id === 'save-draft-btn') {
-                    handleSaveDraft();
-                }
-                if (e.target.id === 'submit-memo-btn') {
-                    handleSubmitMemo();
-                }
-                if (e.target.id === 'approve-btn') {
-                    handleReviewDecision('Setuju');
-                }
-                 if (e.target.id === 'reject-btn') {
-                    handleReviewDecision('Tolak');
-                }
-            });
+            }
 
-            roleSwitcher.addEventListener('change', handleRoleChange);
-
-            renderDashboard();
+            // Initial Load
+            render();
+            addEventListeners();
         });
     </script>
 </body>
