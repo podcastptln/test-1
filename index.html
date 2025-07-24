@@ -258,6 +258,8 @@
                         </form>
                     </div>
                 `;
+                // IMPORTANT: Attach the event listener for the login form AFTER it's rendered
+                document.getElementById('login-form').addEventListener('submit', handleLogin);
             }
 
             function getStatusBadge(status) {
@@ -579,9 +581,9 @@
                                         let chartLabels = [];
                                         let chartValues = [];
 
-                                        if (!isNaN(roe)) { chartLabels.push('ROE'); values.push(roe); chartDataAvailable = true; }
-                                        if (!isNaN(irr)) { labels.push('IRR'); values.push(irr); chartDataAvailable = true; }
-                                        if (!isNaN(wacc)) { labels.push('WACC'); values.push(wacc); chartDataAvailable = true; }
+                                        if (!isNaN(roe)) { chartLabels.push('ROE'); chartValues.push(roe); chartDataAvailable = true; }
+                                        if (!isNaN(irr)) { chartLabels.push('IRR'); chartValues.push(irr); chartDataAvailable = true; }
+                                        if (!isNaN(wacc)) { chartLabels.push('WACC'); chartValues.push(wacc); chartDataAvailable = true; }
 
                                         aspectContentHtml = `
                                             <h4 class="font-semibold mb-2">Detail Data Finansial</h4>
@@ -751,7 +753,7 @@
                     renderDashboard();
                 } else if (event.target.id === 'create-new-memo-btn') {
                     renderForm();
-                } else if (event.target.classList.contains('view-memo-btn')) { // Changed from event.classList.contains
+                } else if (event.target.classList.contains('view-memo-btn')) {
                     const memoId = parseInt(event.target.dataset.id);
                     const memo = appState.memos.find(m => m.id === memoId);
                     if (appState.currentUserRole === 'proposer' && memo.status === 'Draf') {
