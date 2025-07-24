@@ -391,6 +391,9 @@
                         <h3 class="text-lg font-semibold mb-2 required-dot">${aspectTitles[1]}</h3>
                         <p class="text-sm text-slate-500 mb-4">Unggah file CSV dari Aset Operasi yang berisi data finansial. Pastikan format sesuai dengan templat (kolom "Metrik" dan "Nilai").</p>
                         <input type="file" id="csv-upload" accept=".csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
+                        <div class="mt-2">
+                           <a href="#" id="download-csv-template" class="text-sm text-cyan-600 hover:underline">Unduh Templat CSV</a>
+                        </div>
                         <div id="financial-data-preview" class="mt-4 p-4 border rounded-md bg-slate-50 ${Object.keys(data).length > 0 ? '' : 'hidden'}">
                             <h4 class="font-semibold mb-2">Pratinjau Data Finansial</h4>
                             <div class="overflow-x-auto">
@@ -413,6 +416,27 @@
                 contentContainer.innerHTML = contentHtml;
             }
             
+            function handleDownloadTemplate(event) {
+                event.preventDefault();
+                const csvContent = "data:text/csv;charset=utf-8," 
+                    + "Metrik,Nilai\n"
+                    + "EBITDA Margin,18%\n"
+                    + "Net Profit Margin,10%\n"
+                    + "ROE,16\n"
+                    + "IRR,17\n"
+                    + "WACC,12\n"
+                    + "Current Ratio,2.2\n"
+                    + "DSCR,2.5\n";
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "templat_finansial.csv");
+                document.body.appendChild(link); // Required for FF
+                link.click();
+                document.body.removeChild(link);
+            }
+
             function handleCsvUpload(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -688,7 +712,7 @@
                         const memoIndex = appState.memos.findIndex(m => m.id === appState.activeMemoId);
                         const newMemoData = {
                             id: appState.activeMemoId,
-                            title: document.querySelector('h2.font-semibold').textContent.replace('Edit: ', ''),
+                            title: document.querySelector('h2.font-semibold').textContent.replace(/^(Buat Nota Analisa Investasi Baru|Edit: )/, ''),
                             proposer: 'PT Manufaktur Jaya', // Assuming a fixed proposer for simplicity
                             status: isSubmit ? 'Dalam Tinjauan' : 'Draf',
                             submissionDate: isSubmit ? new Date().toISOString() : null,
@@ -728,6 +752,10 @@
                         
                         showModal('Sukses', 'Tinjauan Anda telah berhasil dikirim.');
                         renderReviewView(appState.activeMemoId);
+                    }
+                    // CSV Download Link
+                    if (e.target && e.target.id === 'download-csv-template') {
+                        handleDownloadTemplate(e);
                     }
                 });
 
