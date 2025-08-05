@@ -82,7 +82,7 @@
             // Application state management
             const appState = {
                 isAuthenticated: false,
-                currentUserRole: null, // 'proposer' or 'reviewer'
+                currentUserRole: null, // 'proposer', 'reviewer', or 'committee_head'
                 currentUserName: null, // Stores the logged-in user's name
                 memos: [
                     {
@@ -93,7 +93,8 @@
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 4)).toISOString(),
                         reviewers: [
                             { name: 'Peninjau A', reviewed: true, decision: 'Setuju', comment: 'Analisa finansial sudah baik, mohon perjelas mitigasi risiko operasional.', highlightedAspects: [] }, 
-                            { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [] }
+                            { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [] },
+                            { name: 'Ketuakomite', reviewed: false, decision: null, comment: null, highlightedAspects: [] }
                         ],
                         data: { 
                             // New data structure for 6 aspects
@@ -118,7 +119,8 @@
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
                         reviewers: [
                             { name: 'Peninjau A', reviewed: true, decision: 'Setuju', comment: 'Proposal yang sangat baik dan dibutuhkan.', highlightedAspects: [] }, 
-                            { name: 'Peninjau B', reviewed: true, decision: 'Setuju', comment: 'Setuju, ROI sangat menjanjikan.', highlightedAspects: [] }
+                            { name: 'Peninjau B', reviewed: true, decision: 'Setuju', comment: 'Setuju, ROI sangat menjanjikan.', highlightedAspects: [] },
+                            { name: 'Ketuakomite', reviewed: true, decision: 'Setuju', comment: 'Setuju dengan Peninjau B. Lanjutkan.', highlightedAspects: [] }
                         ],
                         data: { 
                             1: { content: 'Mengganti sistem legacy untuk efisiensi dan integrasi data antar departemen. Dampak lingkungan rendah. Dampak sosial berupa peningkatan skill karyawan.' },
@@ -132,7 +134,8 @@
                             { timestamp: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(), userId: 'pengusul2', action: 'Dibuat' },
                             { timestamp: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(), userId: 'pengusul2', action: 'Diajukan' },
                             { timestamp: new Date(new Date().setDate(new Date().getDate() - 9)).toISOString(), userId: 'peninjau1', action: 'Diperbarui oleh Peninjau (Setuju)' },
-                            { timestamp: new Date(new Date().setDate(new Date().getDate() - 8)).toISOString(), userId: 'peninjau2', action: 'Diperbarui oleh Peninjau (Setuju)' }
+                            { timestamp: new Date(new Date().setDate(new Date().getDate() - 8)).toISOString(), userId: 'peninjau2', action: 'Diperbarui oleh Peninjau (Setuju)' },
+                            { timestamp: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString(), userId: 'ketuakomite', action: 'Diperbarui oleh Peninjau (Setuju)' }
                         ]
                     },
                     {
@@ -155,7 +158,8 @@
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 20)).toISOString(),
                         reviewers: [
                             { name: 'Peninjau A', reviewed: true, decision: 'Tolak', comment: 'Proyeksi NPV terlalu optimis dan tidak sejalan dengan WACC saat ini. Mohon kaji ulang asumsi.', highlightedAspects: [2, 5] }, 
-                            { name: 'Peninjau B', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan Pak Budi. Analisa risiko pasar kurang mendalam.', highlightedAspects: [5] }
+                            { name: 'Peninjau B', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan Pak Budi. Analisa risiko pasar kurang mendalam.', highlightedAspects: [5] },
+                            { name: 'Ketuakomite', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan masukan tim, proyek ditolak.', highlightedAspects: [] }
                         ],
                         data: { 
                             1: { content: 'Membangun hub distribusi baru di Indonesia Timur. Perizinan daerah belum final.' },
@@ -169,7 +173,8 @@
                             { timestamp: new Date(new Date().setDate(new Date().getDate() - 20)).toISOString(), userId: 'pengusul2', action: 'Dibuat' },
                             { timestamp: new Date(new Date().setDate(new Date().getDate() - 20)).toISOString(), userId: 'pengusul2', action: 'Diajukan' },
                             { timestamp: new Date(new Date().setDate(new Date().getDate() - 19)).toISOString(), userId: 'peninjau1', action: 'Diperbarui oleh Peninjau (Tolak)' },
-                            { timestamp: new Date(new Date().setDate(new Date().getDate() - 18)).toISOString(), userId: 'peninjau2', action: 'Diperbarui oleh Peninjau (Tolak)' }
+                            { timestamp: new Date(new Date().setDate(new Date().getDate() - 18)).toISOString(), userId: 'peninjau2', action: 'Diperbarui oleh Peninjau (Tolak)' },
+                            { timestamp: new Date(new Date().setDate(new Date().getDate() - 17)).toISOString(), userId: 'ketuakomite', action: 'Diperbarui oleh Peninjau (Tolak)' }
                         ]
                     },
                 ],
@@ -249,6 +254,7 @@
                 'pengusul2': { password: '123', role: 'proposer', name: 'CV Maju Bersama' },
                 'peninjau1': { password: '123', role: 'reviewer', name: 'Peninjau A' },
                 'peninjau2': { password: '123', role: 'reviewer', name: 'Peninjau B' },
+                'ketuakomite': { password: '123', role: 'committee_head', name: 'Ketuakomite' } // New user
             };
 
             function handleLogin(event) {
@@ -297,7 +303,14 @@
                     return;
                 }
 
-                const roleName = appState.currentUserRole === 'proposer' ? 'Pengusul' : 'Peninjau';
+                let roleName;
+                switch (appState.currentUserRole) {
+                    case 'proposer': roleName = 'Pengusul'; break;
+                    case 'reviewer': roleName = 'Peninjau'; break;
+                    case 'committee_head': roleName = 'Ketua Komite'; break;
+                    default: roleName = '';
+                }
+                
                 appHeader.innerHTML = `
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                         <div>
@@ -320,7 +333,7 @@
                         <form id="login-form" class="bg-white shadow-md rounded-lg p-8">
                             <div class="mb-4">
                                 <label for="username" class="block text-slate-700 text-sm font-bold mb-2">ID Pengguna</label>
-                                <input type="text" id="username" class="shadow appearance-none border rounded w-full py-2 px-3 text-slate-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="pengusul1 / peninjau1">
+                                <input type="text" id="username" class="shadow appearance-none border rounded w-full py-2 px-3 text-slate-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="pengusul1 / peninjau1 / ketuakomite">
                             </div>
                             <div class="mb-6">
                                 <label for="password" class="block text-slate-700 text-sm font-bold mb-2">Kata Sandi</label>
@@ -359,6 +372,7 @@
                                     <option value="">Pilih Peran</option>
                                     <option value="proposer">Pengusul</option>
                                     <option value="reviewer">Peninjau</option>
+                                    <option value="committee_head">Ketua Komite</option>
                                 </select>
                             </div>
 
@@ -459,8 +473,10 @@
                 let newUserName;
                 if (role === 'proposer') {
                     newUserName = subsidiary;
-                } else { // reviewer
-                    newUserName = `Peninjau - ${username}`; // Or just username if preferred
+                } else if (role === 'reviewer') {
+                    newUserName = `Peninjau - ${username}`;
+                } else { // committee_head
+                    newUserName = `Ketua Komite - ${username}`;
                 }
 
                 users[username] = {
@@ -487,12 +503,13 @@
 
             function renderDashboard() {
                 appState.activeView = 'dashboard';
-                const isReviewer = appState.currentUserRole === 'reviewer';
+                const isReviewer = appState.currentUserRole === 'reviewer' || appState.currentUserRole === 'committee_head';
+                const isCommitteeHead = appState.currentUserRole === 'committee_head';
                 let memosForRole = [];
 
                 if (isReviewer) {
-                    // Reviewers see all memos that are not drafts
-                    memosForRole = appState.memos.filter(m => m.status !== 'Draf');
+                    // Reviewers and Committee Head see all memos
+                    memosForRole = appState.memos.filter(m => m.status !== 'Draf' || isCommitteeHead);
                 } else {
                     // Proposers only see their own memos that are not yet approved or rejected (i.e., drafts or in review)
                     memosForRole = appState.memos.filter(m => 
@@ -500,7 +517,38 @@
                         (m.status === 'Draf' || m.status === 'Dalam Tinjauan')
                     );
                 }
-                console.log(`Memos for ${appState.currentUserName} (${appState.currentUserRole}):`, memosForRole); // Added log
+                
+                const memoRowsHtml = memosForRole.map(memo => {
+                    let reviewerStatus = '';
+                    if (isReviewer && memo.reviewers.length > 0) {
+                        const pendingReviewers = memo.reviewers.filter(r => !r.reviewed).map(r => r.name);
+                        const reviewedReviewers = memo.reviewers.filter(r => r.reviewed).map(r => r.name);
+                        
+                        let statusText = '';
+                        if (pendingReviewers.length > 0) {
+                            statusText += `<span class="text-xs text-red-500">Belum ditinjau: ${pendingReviewers.join(', ')}</span><br>`;
+                        }
+                        if (reviewedReviewers.length > 0) {
+                            statusText += `<span class="text-xs text-green-500">Sudah ditinjau: ${reviewedReviewers.join(', ')}</span>`;
+                        }
+                        reviewerStatus = `<td class="px-6 py-4 text-sm text-slate-500">${statusText}</td>`;
+                    }
+                    return `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${memo.title}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${memo.proposer}</td>
+                            ${isReviewer ? '' : `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${memo.submissionDate ? new Date(memo.submissionDate).toLocaleDateString('id-ID') : '-'}</td>`}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">${getStatusBadge(memo.status)}</td>
+                            ${isCommitteeHead ? reviewerStatus : ''}
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button class="view-memo-btn text-cyan-600 hover:text-cyan-900" data-id="${memo.id}">
+                                    ${isReviewer ? (memo.status === 'Draf' ? 'Lihat' : 'Tinjau') : (memo.status === 'Draf' ? 'Edit' : 'Lihat')}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
                 let content = `
                     <div class="bg-white shadow-md rounded-lg p-6">
                         <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
@@ -519,26 +567,15 @@
                                     <tr>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Judul Proyek</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Pengusul</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tanggal Pengajuan</th>
+                                        ${isReviewer ? '' : `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tanggal Pengajuan</th>`}
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                        ${isCommitteeHead ? `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status Peninjau</th>` : ''}
                                         <th scope="col" class="relative px-6 py-3"><span class="sr-only">Aksi</span></th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-slate-200">
-                                    ${memosForRole.map(memo => `
-                                        <tr>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${memo.title}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${memo.proposer}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${memo.submissionDate ? new Date(memo.submissionDate).toLocaleDateString('id-ID') : '-'}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm">${getStatusBadge(memo.status)}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button class="view-memo-btn text-cyan-600 hover:text-cyan-900" data-id="${memo.id}">
-                                                    ${isReviewer ? 'Tinjau' : (memo.status === 'Draf' ? 'Edit' : 'Lihat')}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                    ${memosForRole.length === 0 ? `<tr><td colspan="5" class="text-center py-10 text-slate-500">Tidak ada nota yang tersedia.</td></tr>` : ''}
+                                    ${memoRowsHtml}
+                                    ${memosForRole.length === 0 ? `<tr><td colspan="${isCommitteeHead ? 5 : 4}" class="text-center py-10 text-slate-500">Tidak ada nota yang tersedia.</td></tr>` : ''}
                                 </tbody>
                             </table>
                         </div>
@@ -885,10 +922,12 @@
                 appState.activeView = 'review';
                 appState.activeMemoId = memoId;
                 const memo = appState.memos.find(m => m.id === memoId);
-                const isReviewer = appState.currentUserRole === 'reviewer';
+                const isReviewer = appState.currentUserRole === 'reviewer' || appState.currentUserRole === 'committee_head';
+                const isCommitteeHead = appState.currentUserRole === 'committee_head';
                 const hasReviewed = memo.reviewers.some(r => r.name === appState.currentUserName && r.reviewed);
                 const isDraft = memo.status === 'Draf';
                 const currentReviewer = memo.reviewers.find(r => r.name === appState.currentUserName);
+                const canEdit = isReviewer && !hasReviewed && !isDraft;
 
                 // Check for read-only state
                 const isReadOnly = !isReviewer || hasReviewed || isDraft;
@@ -922,7 +961,7 @@
                         <div id="aspect-${aspectId}" class="p-4 border rounded-lg bg-slate-50 mb-4 transition-all duration-300 ${isHighlighted ? 'highlighted-aspect' : ''}">
                             <div class="flex justify-between items-center mb-2">
                                 <h3 class="text-lg font-semibold text-slate-800">${aspectId}. ${aspectTitles[aspectId]}</h3>
-                                ${isReviewer && !isReadOnly ? `<button class="highlight-aspect-btn text-xs text-red-500 hover:text-red-700 font-medium" data-aspect-id="${aspectId}">Highlight</button>` : ''}
+                                ${canEdit ? `<button class="highlight-aspect-btn text-xs text-red-500 hover:text-red-700 font-medium" data-aspect-id="${aspectId}">Highlight</button>` : ''}
                                 ${isHighlighted ? `<span class="text-xs text-red-500 font-medium">Highlighted</span>` : ''}
                             </div>
                             ${contentHtml}
@@ -946,11 +985,15 @@
                         case 'Revisi': badge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 ml-2">Revisi</span>`; break;
                         default: badge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 ml-2">Menunggu</span>`;
                     }
+                    const reminderButton = isCommitteeHead && !reviewer.reviewed ? 
+                        `<button class="send-reminder-btn ml-2 text-blue-500 hover:text-blue-700 text-xs font-medium" data-reviewer-name="${reviewer.name}">Kirim Pengingat</button>` : '';
+
                     return `
                         <li class="mb-1 text-sm flex items-center">
                             <span class="font-medium text-slate-800">${reviewer.name}</span>
                             ${badge}
                             ${reviewer.comment ? `<p class="text-xs text-slate-500 mt-1 ml-2 italic">"${reviewer.comment}"</p>` : ''}
+                            ${reminderButton}
                         </li>
                     `;
                 }).join('');
@@ -985,7 +1028,7 @@
                                     <ul class="list-none list-inside text-xs h-40 overflow-y-auto border p-2 rounded bg-white">
                                         ${historyHtml}
                                     </ul>
-                                    ${!isReadOnly ? `
+                                    ${canEdit ? `
                                         <div class="mt-6">
                                             <h4 class="font-bold mb-2">Keputusan Tinjauan Anda</h4>
                                             <div class="space-y-4">
@@ -1101,7 +1144,7 @@
                                     } else {
                                         renderMemoView(memoId);
                                     }
-                                } else { // reviewer
+                                } else { // reviewer or committee_head
                                     renderMemoView(memoId);
                                 }
                             });
@@ -1129,8 +1172,12 @@
                         document.getElementById('submit-memo-btn')?.addEventListener('click', () => {
                             const memo = appState.memos.find(m => m.id === appState.activeMemoId);
                             if (memo) {
-                                // Assign default reviewers and update status
-                                memo.reviewers = [{ name: 'Peninjau A', reviewed: false, decision: null, comment: null, highlightedAspects: [] }, { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [] }];
+                                // Assign default reviewers and update status, now including the committee head
+                                memo.reviewers = [
+                                    { name: 'Peninjau A', reviewed: false, decision: null, comment: null, highlightedAspects: [] }, 
+                                    { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [] },
+                                    { name: 'Ketuakomite', reviewed: false, decision: null, comment: null, highlightedAspects: [] }
+                                ];
                                 memo.status = 'Dalam Tinjauan';
                                 memo.submissionDate = new Date().toISOString();
                                 memo.history.push({ timestamp: new Date().toISOString(), userId: appState.currentUserName, action: 'Diajukan' });
@@ -1159,6 +1206,12 @@
                                         aspectEl.classList.add('highlighted-aspect');
                                     }
                                 }
+                            });
+                        });
+                        document.querySelectorAll('.send-reminder-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                const reviewerName = e.target.dataset.reviewerName;
+                                showModal('Pengingat Terkirim', `Pengingat telah dikirim kepada ${reviewerName} untuk segera meninjau nota ini.`);
                             });
                         });
                         break;
