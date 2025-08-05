@@ -352,13 +352,6 @@
                         </form>
                     </div>
                 `;
-                // IMPORTANT: Attach the event listener for the login form AFTER it's rendered
-                document.getElementById('login-form').addEventListener('submit', handleLogin);
-                document.getElementById('signup-link').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    appState.activeView = 'signup';
-                    render();
-                });
             }
 
             function renderSignUp() {
@@ -413,21 +406,6 @@
                         </form>
                     </div>
                 `;
-
-                document.getElementById('signup-form').addEventListener('submit', handleSignUp);
-                document.getElementById('back-to-login-btn').addEventListener('click', () => {
-                    appState.activeView = 'login';
-                    render();
-                });
-
-                document.getElementById('signup-role').addEventListener('change', (e) => {
-                    const subsidiaryFieldGroup = document.getElementById('subsidiary-field-group');
-                    if (e.target.value === 'proposer') {
-                        subsidiaryFieldGroup.style.display = 'block';
-                    } else {
-                        subsidiaryFieldGroup.style.display = 'none';
-                    }
-                });
             }
 
             function handleSignUp(event) {
@@ -512,11 +490,8 @@
                     // Reviewers and Committee Head see all memos
                     memosForRole = appState.memos.filter(m => m.status !== 'Draf' || isCommitteeHead);
                 } else {
-                    // Proposers only see their own memos that are not yet approved or rejected (i.e., drafts or in review)
-                    memosForRole = appState.memos.filter(m => 
-                        m.proposer === appState.currentUserName && 
-                        (m.status === 'Draf' || m.status === 'Dalam Tinjauan')
-                    );
+                    // Proposers only see their own memos
+                    memosForRole = appState.memos.filter(m => m.proposer === appState.currentUserName);
                 }
                 
                 const memoRowsHtml = memosForRole.map(memo => {
@@ -853,7 +828,7 @@
                             const data = new Uint8Array(e.target.result);
                             const workbook = XLSX.read(data, {type: 'array'});
                             const firstSheetName = workbook.SheetNames[0];
-                            const worksheet = workbook.Sheets[firstSheetName];
+                            const worksheet = XLSX.Sheets[firstSheetName];
                             const json = XLSX.utils.sheet_to_json(worksheet);
 
                             if (isFinancial) {
@@ -1125,8 +1100,7 @@
 
             function render() {
                 renderHeader();
-                document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-
+                
                 switch (appState.activeView) {
                     case 'login':
                         renderLogin();
@@ -1136,102 +1110,18 @@
                         break;
                     case 'dashboard':
                         renderDashboard();
-                        document.getElementById('create-new-memo-btn')?.addEventListener('click', () => renderForm());
-                        document.getElementById('view-approved-archive-btn')?.addEventListener('click', () => renderArchivedMemos('approved'));
-                        document.getElementById('view-rejected-archive-btn')?.addEventListener('click', () => renderArchivedMemos('rejected'));
-                        document.querySelectorAll('.view-memo-btn').forEach(btn => {
-                            btn.addEventListener('click', (e) => {
-                                const memoId = parseInt(e.target.dataset.id);
-                                if (appState.currentUserRole === 'proposer') {
-                                    const memo = appState.memos.find(m => m.id === memoId);
-                                    if (memo.status === 'Draf') {
-                                        renderForm(memoId);
-                                    } else {
-                                        renderMemoView(memoId);
-                                    }
-                                } else { // reviewer or committee_head
-                                    renderMemoView(memoId);
-                                }
-                            });
-                        });
                         break;
                     case 'form':
                         // Event listeners for form rendering are handled within renderForm()
-                        document.getElementById('back-to-dashboard-btn')?.addEventListener('click', renderDashboard);
-                        document.getElementById('form-tabs').addEventListener('click', (e) => {
-                            const tabBtn = e.target.closest('.tab-btn');
-                            if (tabBtn) {
-                                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                                tabBtn.classList.add('active');
-                                appState.activeTab = parseInt(tabBtn.dataset.tab);
-                                renderFormTabContent();
-                            }
-                        });
-                        document.getElementById('save-draft-btn')?.addEventListener('click', () => {
-                            const memo = appState.memos.find(m => m.id === appState.activeMemoId);
-                            if (memo) {
-                                memo.data = JSON.parse(JSON.stringify(appState.activeFormData));
-                                showModal('Draf Disimpan', 'Nota Anda telah disimpan sebagai draf.');
-                            }
-                        });
-                        document.getElementById('submit-memo-btn')?.addEventListener('click', () => {
-                            const memo = appState.memos.find(m => m.id === appState.activeMemoId);
-                            if (memo) {
-                                // Assign default reviewers and update status, now including the committee head
-                                memo.reviewers = [
-                                    { name: 'Peninjau A', reviewed: false, decision: null, comment: null, highlightedAspects: [] }, 
-                                    { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [] },
-                                    { name: 'Ketuakomite', reviewed: false, decision: null, comment: null, highlightedAspects: [] }
-                                ];
-                                memo.status = 'Dalam Tinjauan';
-                                memo.submissionDate = new Date().toISOString();
-                                memo.history.push({ timestamp: new Date().toISOString(), userId: appState.currentUserName, action: 'Diajukan' });
-                                showModal('Pengajuan Berhasil', 'Nota Anda telah berhasil diajukan untuk ditinjau.');
-                                renderDashboard();
-                            }
-                        });
+                        renderFormTabContent();
+                        checkFormCompleteness();
                         break;
                     case 'review':
-                        document.getElementById('back-to-dashboard-btn')?.addEventListener('click', renderDashboard);
-                        document.getElementById('reviewer-approve-btn')?.addEventListener('click', () => handleReviewDecision('Setuju'));
-                        document.getElementById('reviewer-reject-btn')?.addEventListener('click', () => handleReviewDecision('Tolak'));
-                        document.querySelectorAll('.highlight-aspect-btn').forEach(btn => {
-                            btn.addEventListener('click', (e) => {
-                                const memo = appState.memos.find(m => m.id === appState.activeMemoId);
-                                const reviewer = memo.reviewers.find(r => r.name === appState.currentUserName);
-                                const aspectId = parseInt(e.target.dataset.aspectId);
-                                const aspectEl = document.getElementById(`aspect-${aspectId}`);
-                                if (reviewer && aspectEl) {
-                                    const index = reviewer.highlightedAspects.indexOf(aspectId);
-                                    if (index > -1) {
-                                        reviewer.highlightedAspects.splice(index, 1);
-                                        aspectEl.classList.remove('highlighted-aspect');
-                                    } else {
-                                        reviewer.highlightedAspects.push(aspectId);
-                                        aspectEl.classList.add('highlighted-aspect');
-                                    }
-                                }
-                            });
-                        });
-                        document.querySelectorAll('.send-reminder-btn').forEach(btn => {
-                            btn.addEventListener('click', (e) => {
-                                const reviewerName = e.target.dataset.reviewerName;
-                                showModal('Pengingat Terkirim', `Pengingat telah dikirim kepada ${reviewerName} untuk segera meninjau nota ini.`);
-                            });
-                        });
+                        // Event listeners for review rendering are handled within renderMemoView()
                         break;
                     case 'archive_approved':
                     case 'archive_rejected':
-                        document.getElementById('back-to-dashboard-btn')?.addEventListener('click', renderDashboard);
-                        document.querySelectorAll('.view-memo-btn').forEach(btn => {
-                            btn.addEventListener('click', (e) => {
-                                renderMemoView(parseInt(e.target.dataset.id));
-                            });
-                        });
-                        // Add listeners for download buttons
-                        document.querySelectorAll('.download-docx-btn').forEach(btn => {
-                            btn.addEventListener('click', (e) => handleDownloadDocx(parseInt(e.target.dataset.id)));
-                        });
+                        // Event listeners for archive rendering are handled within renderArchivedMemos()
                         break;
                 }
             }
@@ -1336,9 +1226,205 @@
                     renderDashboard();
                 }
             }
+            
+            // Centralized Event Delegation for all dynamic content
+            function addEventListeners() {
+                document.getElementById('app-header').addEventListener('click', (e) => {
+                    const logoutBtn = e.target.closest('#logout-btn');
+                    if (logoutBtn) {
+                        handleLogout();
+                    }
+                });
 
-            // Initial render
+                mainContent.addEventListener('click', (e) => {
+                    const target = e.target;
+                    
+                    // Dashboard buttons
+                    const createNewBtn = target.closest('#create-new-memo-btn');
+                    if (createNewBtn) {
+                        renderForm();
+                        return;
+                    }
+                    const viewApprovedBtn = target.closest('#view-approved-archive-btn');
+                    if (viewApprovedBtn) {
+                        renderArchivedMemos('approved');
+                        return;
+                    }
+                    const viewRejectedBtn = target.closest('#view-rejected-archive-btn');
+                    if (viewRejectedBtn) {
+                        renderArchivedMemos('rejected');
+                        return;
+                    }
+                    const viewMemoBtn = target.closest('.view-memo-btn');
+                    if (viewMemoBtn) {
+                        const memoId = parseInt(viewMemoBtn.dataset.id);
+                        if (appState.currentUserRole === 'proposer') {
+                            const memo = appState.memos.find(m => m.id === memoId);
+                            if (memo.status === 'Draf') {
+                                renderForm(memoId);
+                            } else {
+                                renderMemoView(memoId);
+                            }
+                        } else { // reviewer or committee_head
+                            renderMemoView(memoId);
+                        }
+                        return;
+                    }
+                    const backBtn = target.closest('#back-to-dashboard-btn');
+                    if (backBtn) {
+                        renderDashboard();
+                        return;
+                    }
+
+                    // Form buttons
+                    const saveDraftBtn = target.closest('#save-draft-btn');
+                    if (saveDraftBtn) {
+                        const memo = appState.memos.find(m => m.id === appState.activeMemoId);
+                        if (memo) {
+                            memo.data = JSON.parse(JSON.stringify(appState.activeFormData));
+                            showModal('Draf Disimpan', 'Nota Anda telah disimpan sebagai draf.');
+                        }
+                        return;
+                    }
+                    const submitMemoBtn = target.closest('#submit-memo-btn');
+                    if (submitMemoBtn) {
+                        const memo = appState.memos.find(m => m.id === appState.activeMemoId);
+                        if (memo) {
+                            memo.reviewers = [
+                                { name: 'Peninjau A', reviewed: false, decision: null, comment: null, highlightedAspects: [] }, 
+                                { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [] },
+                                { name: 'Ketuakomite', reviewed: false, decision: null, comment: null, highlightedAspects: [] }
+                            ];
+                            memo.status = 'Dalam Tinjauan';
+                            memo.submissionDate = new Date().toISOString();
+                            memo.history.push({ timestamp: new Date().toISOString(), userId: appState.currentUserName, action: 'Diajukan' });
+                            showModal('Pengajuan Berhasil', 'Nota Anda telah berhasil diajukan untuk ditinjau.');
+                            renderDashboard();
+                        }
+                        return;
+                    }
+
+                    // Review buttons
+                    const rejectBtn = target.closest('#reviewer-reject-btn');
+                    if (rejectBtn) {
+                        handleReviewDecision('Tolak');
+                        return;
+                    }
+                    const approveBtn = target.closest('#reviewer-approve-btn');
+                    if (approveBtn) {
+                        handleReviewDecision('Setuju');
+                        return;
+                    }
+                    const highlightBtn = target.closest('.highlight-aspect-btn');
+                    if (highlightBtn) {
+                        const memo = appState.memos.find(m => m.id === appState.activeMemoId);
+                        const reviewer = memo.reviewers.find(r => r.name === appState.currentUserName);
+                        const aspectId = parseInt(highlightBtn.dataset.aspectId);
+                        const aspectEl = document.getElementById(`aspect-${aspectId}`);
+                        if (reviewer && aspectEl) {
+                            const index = reviewer.highlightedAspects.indexOf(aspectId);
+                            if (index > -1) {
+                                reviewer.highlightedAspects.splice(index, 1);
+                                aspectEl.classList.remove('highlighted-aspect');
+                            } else {
+                                reviewer.highlightedAspects.push(aspectId);
+                                aspectEl.classList.add('highlighted-aspect');
+                            }
+                        }
+                        return;
+                    }
+                    const sendReminderBtn = target.closest('.send-reminder-btn');
+                    if (sendReminderBtn) {
+                        const reviewerName = sendReminderBtn.dataset.reviewerName;
+                        showModal('Pengingat Terkirim', `Pengingat telah dikirim kepada ${reviewerName} untuk segera meninjau nota ini.`);
+                        return;
+                    }
+
+                    // Archive buttons
+                    const downloadDocxBtn = target.closest('.download-docx-btn');
+                    if (downloadDocxBtn) {
+                        handleDownloadDocx(parseInt(downloadDocxBtn.dataset.id));
+                        return;
+                    }
+
+                    // Login/Signup buttons
+                    const signupLink = target.closest('#signup-link');
+                    if (signupLink) {
+                        e.preventDefault();
+                        appState.activeView = 'signup';
+                        render();
+                        return;
+                    }
+                    const backToLoginBtn = target.closest('#back-to-login-btn');
+                    if (backToLoginBtn) {
+                        appState.activeView = 'login';
+                        render();
+                        return;
+                    }
+                });
+
+                // Attach specific form and tab change listeners since they don't involve delegation
+                mainContent.addEventListener('input', (e) => {
+                    const aspectContent = e.target.closest('#aspect-content');
+                    if (aspectContent) {
+                        appState.activeFormData[appState.activeTab] = { content: aspectContent.value };
+                        checkFormCompleteness();
+                    }
+                });
+                mainContent.addEventListener('change', (e) => {
+                     const roleSelect = e.target.closest('#signup-role');
+                     if (roleSelect) {
+                        const subsidiaryFieldGroup = document.getElementById('subsidiary-field-group');
+                        if (e.target.value === 'proposer') {
+                            subsidiaryFieldGroup.style.display = 'block';
+                        } else {
+                            subsidiaryFieldGroup.style.display = 'none';
+                        }
+                        return;
+                     }
+                });
+                mainContent.addEventListener('submit', (e) => {
+                    const loginForm = e.target.closest('#login-form');
+                    if (loginForm) {
+                        e.preventDefault();
+                        handleLogin(e);
+                        return;
+                    }
+                    const signupForm = e.target.closest('#signup-form');
+                    if (signupForm) {
+                        e.preventDefault();
+                        handleSignUp(e);
+                        return;
+                    }
+                });
+                mainContent.addEventListener('click', (e) => {
+                    const tabBtn = e.target.closest('.tab-btn');
+                    if (tabBtn) {
+                        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                        tabBtn.classList.add('active');
+                        appState.activeTab = parseInt(tabBtn.dataset.tab);
+                        renderFormTabContent();
+                    }
+                });
+
+                // Attach file upload listeners as they need to be on the specific input
+                mainContent.addEventListener('change', (e) => {
+                    const financialUpload = e.target.closest('#financial-upload');
+                    if(financialUpload) {
+                        handleFileUpload(e, 2);
+                        return;
+                    }
+                    const rawDataUpload = e.target.closest('#raw-data-upload');
+                    if(rawDataUpload) {
+                        handleFileUpload(e, 6);
+                        return;
+                    }
+                });
+            }
+
+            // Initial render and event listener setup
             render();
+            addEventListeners();
         });
     </script>
 </body>
