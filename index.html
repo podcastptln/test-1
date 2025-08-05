@@ -93,9 +93,9 @@
                         status: 'Dalam Tinjauan', // Draf, Dalam Tinjauan, Disetujui, Ditolak
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 4)).toISOString(),
                         reviewers: [
-                            { name: 'Peninjau A', reviewed: true, decision: 'Setuju', comment: 'Analisa finansial sudah baik, mohon perjelas mitigasi risiko operasional.', highlightedAspects: [] }, 
-                            { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [] },
-                            { name: 'Ketuakomite', reviewed: false, decision: null, comment: null, highlightedAspects: [] }
+                            { name: 'Peninjau A', reviewed: true, decision: 'Setuju', comment: 'Analisa finansial sudah baik, mohon perjelas mitigasi risiko operasional.', highlightedAspects: [], hasBeenReminded: false }, 
+                            { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [], hasBeenReminded: false },
+                            { name: 'Ketuakomite', reviewed: false, decision: null, comment: null, highlightedAspects: [], hasBeenReminded: false }
                         ],
                         data: { 
                             // New data structure for 6 aspects
@@ -119,9 +119,9 @@
                         status: 'Disetujui',
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
                         reviewers: [
-                            { name: 'Peninjau A', reviewed: true, decision: 'Setuju', comment: 'Proposal yang sangat baik dan dibutuhkan.', highlightedAspects: [] }, 
-                            { name: 'Peninjau B', reviewed: true, decision: 'Setuju', comment: 'Setuju, ROI sangat menjanjikan.', highlightedAspects: [] },
-                            { name: 'Ketuakomite', reviewed: true, decision: 'Setuju', comment: 'Setuju dengan Peninjau B. Lanjutkan.', highlightedAspects: [] }
+                            { name: 'Peninjau A', reviewed: true, decision: 'Setuju', comment: 'Proposal yang sangat baik dan dibutuhkan.', highlightedAspects: [], hasBeenReminded: false }, 
+                            { name: 'Peninjau B', reviewed: true, decision: 'Setuju', comment: 'Setuju, ROI sangat menjanjikan.', highlightedAspects: [], hasBeenReminded: false },
+                            { name: 'Ketuakomite', reviewed: true, decision: 'Setuju', comment: 'Setuju dengan Peninjau B. Lanjutkan.', highlightedAspects: [], hasBeenReminded: false }
                         ],
                         data: { 
                             1: { content: 'Mengganti sistem legacy untuk efisiensi dan integrasi data antar departemen. Dampak lingkungan rendah. Dampak sosial berupa peningkatan skill karyawan.' },
@@ -158,9 +158,9 @@
                         status: 'Ditolak',
                         submissionDate: new Date(new Date().setDate(new Date().getDate() - 20)).toISOString(),
                         reviewers: [
-                            { name: 'Peninjau A', reviewed: true, decision: 'Tolak', comment: 'Proyeksi NPV terlalu optimis dan tidak sejalan dengan WACC saat ini. Mohon kaji ulang asumsi.', highlightedAspects: [2, 5] }, 
-                            { name: 'Peninjau B', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan Pak Budi. Analisa risiko pasar kurang mendalam.', highlightedAspects: [5] },
-                            { name: 'Ketuakomite', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan masukan tim, proyek ditolak.', highlightedAspects: [] }
+                            { name: 'Peninjau A', reviewed: true, decision: 'Tolak', comment: 'Proyeksi NPV terlalu optimis dan tidak sejalan dengan WACC saat ini. Mohon kaji ulang asumsi.', highlightedAspects: [2, 5], hasBeenReminded: false }, 
+                            { name: 'Peninjau B', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan Pak Budi. Analisa risiko pasar kurang mendalam.', highlightedAspects: [5], hasBeenReminded: false },
+                            { name: 'Ketuakomite', reviewed: true, decision: 'Tolak', comment: 'Setuju dengan masukan tim, proyek ditolak.', highlightedAspects: [], hasBeenReminded: false }
                         ],
                         data: { 
                             1: { content: 'Membangun hub distribusi baru di Indonesia Timur. Perizinan daerah belum final.' },
@@ -481,6 +481,26 @@
             }
 
             function renderDashboard() {
+                // Check for pending reminders and show a modal before rendering the dashboard
+                const reminders = appState.memos
+                    .flatMap(memo => memo.reviewers.filter(r => r.name === appState.currentUserName && r.hasBeenReminded))
+                    .map(reviewer => {
+                        const memoTitle = appState.memos.find(m => m.reviewers.includes(reviewer))?.title;
+                        return `Anda memiliki tinjauan yang tertunda untuk nota: <b>${memoTitle}</b>. Ketua Komite telah mengirimkan pengingat untuk segera meninjau.`;
+                    });
+
+                if (reminders.length > 0) {
+                    showModal('Pemberitahuan Tinjauan', reminders.join('<br><br>'));
+                    // Reset the reminder flags after showing the notification
+                    appState.memos.forEach(memo => {
+                        memo.reviewers.forEach(reviewer => {
+                            if (reviewer.name === appState.currentUserName && reviewer.hasBeenReminded) {
+                                reviewer.hasBeenReminded = false;
+                            }
+                        });
+                    });
+                }
+                
                 appState.activeView = 'dashboard';
                 const isReviewer = appState.currentUserRole === 'reviewer' || appState.currentUserRole === 'committee_head';
                 const isCommitteeHead = appState.currentUserRole === 'committee_head';
@@ -1291,9 +1311,9 @@
                         const memo = appState.memos.find(m => m.id === appState.activeMemoId);
                         if (memo) {
                             memo.reviewers = [
-                                { name: 'Peninjau A', reviewed: false, decision: null, comment: null, highlightedAspects: [] }, 
-                                { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [] },
-                                { name: 'Ketuakomite', reviewed: false, decision: null, comment: null, highlightedAspects: [] }
+                                { name: 'Peninjau A', reviewed: false, decision: null, comment: null, highlightedAspects: [], hasBeenReminded: false }, 
+                                { name: 'Peninjau B', reviewed: false, decision: null, comment: null, highlightedAspects: [], hasBeenReminded: false },
+                                { name: 'Ketuakomite', reviewed: false, decision: null, comment: null, highlightedAspects: [], hasBeenReminded: false }
                             ];
                             memo.status = 'Dalam Tinjauan';
                             memo.submissionDate = new Date().toISOString();
@@ -1335,8 +1355,13 @@
                     }
                     const sendReminderBtn = target.closest('.send-reminder-btn');
                     if (sendReminderBtn) {
+                        const memo = appState.memos.find(m => m.id === appState.activeMemoId);
                         const reviewerName = sendReminderBtn.dataset.reviewerName;
-                        showModal('Pengingat Terkirim', `Pengingat telah dikirim kepada ${reviewerName} untuk segera meninjau nota ini.`);
+                        const reviewerToRemind = memo.reviewers.find(r => r.name === reviewerName);
+                        if (reviewerToRemind) {
+                            reviewerToRemind.hasBeenReminded = true;
+                            showModal('Pengingat Terkirim', `Pengingat telah dikirim kepada ${reviewerName} untuk segera meninjau nota ini.`);
+                        }
                         return;
                     }
 
