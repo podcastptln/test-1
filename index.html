@@ -49,6 +49,7 @@
         .highlighted-aspect {
             border-color: #ef4444; /* red-500 */
             background-color: #fef2f2; /* red-50 */
+            border-width: 2px;
         }
     </style>
 </head>
@@ -560,6 +561,11 @@
                                     <button id="view-rejected-archive-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700">Arsip Ditolak</button>
                                 </div>
                             ` : ''}
+                            ${isCommitteeHead ? `
+                                <div class="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-0">
+                                    <button id="view-all-memos-btn" class="bg-slate-600 text-white font-bold py-2 px-4 rounded-md hover:bg-slate-700">Lihat Semua Nota</button>
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-slate-200">
@@ -922,15 +928,15 @@
                 appState.activeView = 'review';
                 appState.activeMemoId = memoId;
                 const memo = appState.memos.find(m => m.id === memoId);
-                const isReviewer = appState.currentUserRole === 'reviewer' || appState.currentUserRole === 'committee_head';
+                const isReviewerOrCommitteeHead = appState.currentUserRole === 'reviewer' || appState.currentUserRole === 'committee_head';
                 const isCommitteeHead = appState.currentUserRole === 'committee_head';
                 const hasReviewed = memo.reviewers.some(r => r.name === appState.currentUserName && r.reviewed);
                 const isDraft = memo.status === 'Draf';
                 const currentReviewer = memo.reviewers.find(r => r.name === appState.currentUserName);
-                const canEdit = isReviewer && !hasReviewed && !isDraft;
+                const canEdit = isReviewerOrCommitteeHead && !hasReviewed && !isDraft;
 
                 // Check for read-only state
-                const isReadOnly = !isReviewer || hasReviewed || isDraft;
+                const isReadOnly = !isReviewerOrCommitteeHead || hasReviewed || isDraft;
                 
                 const dataDisplayHtml = Object.keys(aspectTitles).map(key => {
                     const aspectId = parseInt(key);
@@ -962,7 +968,6 @@
                             <div class="flex justify-between items-center mb-2">
                                 <h3 class="text-lg font-semibold text-slate-800">${aspectId}. ${aspectTitles[aspectId]}</h3>
                                 ${canEdit ? `<button class="highlight-aspect-btn text-xs text-red-500 hover:text-red-700 font-medium" data-aspect-id="${aspectId}">Highlight</button>` : ''}
-                                ${isHighlighted ? `<span class="text-xs text-red-500 font-medium">Highlighted</span>` : ''}
                             </div>
                             ${contentHtml}
                         </div>
@@ -1034,7 +1039,7 @@
                                             <div class="space-y-4">
                                                 <div>
                                                     <label for="reviewer-comment" class="block text-sm font-medium text-slate-700">Komentar</label>
-                                                    <textarea id="reviewer-comment" class="mt-1 w-full h-24 p-2 border border-slate-300 rounded-md focus:ring-cyan-500 focus:border-cyan-500" placeholder="Komentar Anda untuk Pengusul"></textarea>
+                                                    <textarea id="reviewer-comment" class="mt-1 w-full h-24 p-2 border border-slate-300 rounded-md focus:ring-cyan-500 focus:border-cyan-500" placeholder="Komentar Anda untuk Pengusul">${currentReviewer.comment || ''}</textarea>
                                                 </div>
                                                 <div class="flex justify-end gap-2">
                                                     <button id="reviewer-reject-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-md hover:bg-red-600 w-full">Tolak</button>
